@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Slide Editor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+</head>
+<body>
+  <div id="toolbar">
+    <select id="deckSelect"><option value="">덱 선택…</option></select>
+    <button id="btnImport">가져오기</button>
+    <select id="canvasSize" title="캔버스 사이즈 (다음에 만들 페이지부터 적용)">
+      <option value="1280x720" selected>1280×720 · 프레젠테이션</option>
+      <option value="1080x1080">1080×1080 · 카드뉴스</option>
+      <option value="1080x1920">1080×1920 · 쇼츠/스토리</option>
+      <option value="1920x1080">1920×1080 · 유튜브</option>
+    </select>
+    <button id="btnAddPage">+ 새 페이지</button>
+    <button id="btnAddText">+ 텍스트</button>
+    <label class="btn" for="fileImg">+ 이미지</label>
+    <input type="file" id="fileImg" accept="image/*" hidden>
+    <button id="btnCrop" disabled>자르기</button>
+    <button id="btnDuplicate" disabled title="복제 (Ctrl+D)">복제</button>
+    <button id="btnDelete" disabled>삭제</button>
+    <span class="sep"></span>
+    <button id="btnUndo" disabled title="실행취소 (Ctrl+Z)">↶</button>
+    <button id="btnRedo" disabled title="다시실행 (Ctrl+Shift+Z)">↷</button>
+    <span class="spacer"></span>
+    <input type="text" id="saveName" placeholder="저장할 파일명 (예: my-deck.html)">
+    <button id="btnSave">저장</button>
+  </div>
+  <div id="main">
+    <div id="workspace">
+      <div id="stage">
+        <canvas id="c"></canvas>
+        <div id="miniToolbar" hidden>
+          <button id="miniDup" title="복제 (Ctrl+D)">⧉</button>
+          <button id="miniDel" title="삭제">🗑</button>
+          <button id="miniMore" title="더보기">⋯</button>
+        </div>
+        <div id="zoomControls">
+          <button id="zoomOut" title="축소">−</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomIn" title="확대">+</button>
+          <button id="zoomFit" title="화면에 맞추기">맞춤</button>
+        </div>
+      </div>
+      <div id="props"><div class="hint">요소를 선택하세요</div></div>
+    </div>
+    <div id="pages"></div>
+  </div>
+  <div id="ctxMenu" hidden></div>
+  <script src="editor.js"></script>
+</body>
+</html>
