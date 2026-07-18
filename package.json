@@ -4,7 +4,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "dev": "vite",
+    "dev": "node server.js & vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "start": "node server.js"

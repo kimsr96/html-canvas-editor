@@ -1,16 +1,16 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { chromium } = require('playwright');
 
 const app = express();
 app.use(express.json({ limit: '150mb' }));
 
-// serve the built React app from dist/ if present, otherwise fall back to the
-// legacy vanilla-JS public/ build (kept as a backup until dist/ is verified)
+// serve the built React app (npm run build); in dev, vite on :5173 proxies /api here
 const distDir = path.join(__dirname, 'dist');
-const staticDir = fs.existsSync(distDir) ? distDir : path.join(__dirname, 'public');
-app.use(express.static(staticDir));
+if (fs.existsSync(distDir)) app.use(express.static(distDir));
+else console.log('dist/ not found — run `npm run build`, or use the vite dev server on :5173');
 
 // decks live one level up from this project folder
 const ROOT = path.resolve(__dirname, '..');
@@ -28,16 +28,17 @@ function inlineLocalImage(src) {
   }
 }
 
-app.get('/api/list', (req, res) => {
-  const files = fs.readdirSync(ROOT).filter((f) => f.toLowerCase().endsWith('.html'));
-  res.json(files);
-});
-
 app.post('/api/import', async (req, res) => {
-  const { file } = req.body || {};
-  if (!file) return res.status(400).json({ error: 'file required' });
-  const filePath = path.join(ROOT, path.basename(file));
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
+  const { file, html } = req.body || {};
+  if (!file && !html) return res.status(400).json({ error: 'file or html required' });
+
+  // A picked-from-disk file arrives as raw HTML (browsers don't expose real
+  // filesystem paths), so write it to a scratch file Playwright can open.
+  const filePath = html
+    ? path.join(os.tmpdir(), `import-${Date.now()}-${Math.random().toString(36).slice(2)}.html`)
+    : path.join(ROOT, path.basename(file));
+  if (html) fs.writeFileSync(filePath, html, 'utf8');
+  else if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
 
   let browser;
   try {
@@ -213,6 +214,7 @@ app.post('/api/import', async (req, res) => {
     res.status(500).json({ error: String(e && e.message || e) });
   } finally {
     if (browser) await browser.close();
+    if (html) fs.unlink(filePath, () => {});
   }
 });
 

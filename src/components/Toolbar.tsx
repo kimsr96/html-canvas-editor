@@ -6,7 +6,6 @@ import { addText, addImageFromFile, duplicateSelected } from '../editor/canvasOp
 import { undo, redo } from '../editor/history';
 
 export default function Toolbar({ engine }: { engine: EditorEngine }) {
-  const decks = useEditorStore((s) => s.decks);
   const canvasSize = useEditorStore((s) => s.canvasSize);
   const setCanvasSize = useEditorStore((s) => s.setCanvasSize);
   const saveName = useEditorStore((s) => s.saveName);
@@ -16,22 +15,16 @@ export default function Toolbar({ engine }: { engine: EditorEngine }) {
   const canRedo = useEditorStore((s) => s.canRedo);
   const cropModeActive = useEditorStore((s) => s.cropModeActive);
 
-  const [deckFile, setDeckFile] = useState('');
   const [importing, setImporting] = useState(false);
 
   const btnCropDisabled = selection.type !== 'image' && !selection.isCropRect;
 
-  const onImport = async () => {
+  const onDeckFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
     setImporting(true);
-    await engine.importDeck(deckFile);
-    setImporting(false);
-  };
-
-  const onDeckChange = async (file: string) => {
-    setDeckFile(file);
-    if (!file || importing) return;
-    setImporting(true);
-    await engine.importDeck(file);
+    await engine.importDeckFile(file);
     setImporting(false);
   };
 
@@ -43,13 +36,8 @@ export default function Toolbar({ engine }: { engine: EditorEngine }) {
 
   return (
     <div id="toolbar">
-      <select value={deckFile} disabled={importing} onChange={(e) => void onDeckChange(e.target.value)}>
-        <option value="">덱 선택…</option>
-        {decks.map((f) => (
-          <option key={f} value={f}>{f}</option>
-        ))}
-      </select>
-      <button onClick={onImport} disabled={importing}>{importing ? '불러오는 중…' : '가져오기'}</button>
+      <label className="btn" htmlFor="fileDeck">{importing ? '불러오는 중…' : '덱 파일 선택…'}</label>
+      <input type="file" id="fileDeck" accept=".html" hidden disabled={importing} onChange={(e) => void onDeckFile(e)} />
       <select
         value={canvasSize}
         onChange={(e) => setCanvasSize(e.target.value)}

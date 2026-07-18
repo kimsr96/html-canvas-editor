@@ -104,7 +104,6 @@ export class EditorEngine {
 
   private boot(): void {
     const restored = this.restoreAutosave();
-    void this.loadDeckList();
     if (restored) {
       this.store.getState().showToast('복원됨');
       this.loadPage(0);
@@ -378,19 +377,27 @@ export class EditorEngine {
     } : null;
 
     const finish = () => {
-      if (pageJson) {
-        this.canvas.loadFromJSON(pageJson, () => {
+      const render = () => {
+        if (pageJson) {
+          this.canvas.loadFromJSON(pageJson, () => {
+            this.canvas.renderAll();
+            this.updatePropsAndButtons();
+            resetHistory(this);
+            this.fitStage();
+          });
+        } else {
           this.canvas.renderAll();
           this.updatePropsAndButtons();
           resetHistory(this);
           this.fitStage();
-        });
-      } else {
-        this.canvas.renderAll();
-        this.updatePropsAndButtons();
-        resetHistory(this);
-        this.fitStage();
-      }
+        }
+      };
+      // Canvas text is rasterized once at render time, unlike DOM text which
+      // reflows automatically when a web font finishes loading. Rendering
+      // before Pretendard is ready bakes in fallback-font metrics (wrong
+      // glyph widths/line breaks) permanently, which is why imported slides
+      // look fine in a normal browser tab but broken on the canvas.
+      void (document.fonts ? document.fonts.ready : Promise.resolve()).then(render);
     };
 
     if (p.json) {
@@ -552,29 +559,19 @@ export class EditorEngine {
     }
   };
 
-  // ---- server: deck list / import / save ----
+  // ---- server: deck import / save ----
 
-  async loadDeckList(): Promise<void> {
+  async importDeckFile(file: File): Promise<void> {
     try {
-      const res = await fetch('/api/list');
-      const files = await res.json();
-      this.store.getState().setDecks(files);
-    } catch {
-      // deck list is a nice-to-have; ignore failures
-    }
-  }
-
-  async importDeck(file: string): Promise<void> {
-    if (!file) { this.store.getState().showToast('덱을 선택하세요'); return; }
-    try {
+      const html = await file.text();
       const res = await fetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file }),
+        body: JSON.stringify({ html }),
       });
       const data = await res.json() as { error?: string; pages?: ImportedPage[] };
       if (data.error) throw new Error(data.error);
-      // Selecting a deck means opening that deck. Replacing the current pages
+      // Picking a deck means opening that deck. Replacing the current pages
       // prevents stale autosave pages or a previous deck from appearing before
       // the selected file and making the editor differ from the source HTML.
       const newPages = (data.pages || []).map((page) => ({
@@ -587,7 +584,7 @@ export class EditorEngine {
       if (newPages.length === 0) throw new Error('가져온 슬라이드가 없습니다');
       this.store.getState().setPages(newPages);
       this.loadPage(0);
-      const base = file.replace(/\.html$/i, '');
+      const base = file.name.replace(/\.html$/i, '');
       this.store.getState().setSaveName(base + '-edited.html');
     } catch (e) {
       this.store.getState().showToast('가져오기 실패: ' + (e instanceof Error ? e.message : String(e)));
@@ -595,14 +592,19 @@ export class EditorEngine {
   }
 
   async save(file: string): Promise<void> {
-    if (!file) { this.store.getState().showToast('저장할 파일명을 입력하세요 (예: my-deck.html)'); return; }
+    // A blank filename used to just show a toast and silently no-op, which
+    // looked like "저장을 눌러도 반영이 안 됨" when the field was never
+    // filled in (e.g. starting from a blank page instead of an import).
+    // Fall back to a default so the button always actually writes a file.
+    const name = file || `slide-${new Date().toISOString().slice(0, 10)}.html`;
+    if (name !== file) this.store.getState().setSaveName(name);
     this.captureCurrentPage();
     const html = buildExportHtml(this.store.getState().pages);
     try {
       const res = await fetch('/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file, html }),
+        body: JSON.stringify({ file: name, html }),
       });
       const data = await res.json();
       if (data.error) this.store.getState().showToast('저장 실패: ' + data.error);

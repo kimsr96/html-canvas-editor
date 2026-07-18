@@ -30,7 +30,6 @@ interface EditorState {
   // toolbar controls
   canvasSize: string;
   saveName: string;
-  decks: string[];
 
   // selection / button-enable meta mirrored from fabric (meta only, not full props)
   selection: SelectionMeta;
@@ -51,7 +50,6 @@ interface EditorState {
   setZoomPercent: (p: number) => void;
   setCanvasSize: (s: string) => void;
   setSaveName: (s: string) => void;
-  setDecks: (d: string[]) => void;
   setSelection: (s: SelectionMeta) => void;
   setUndoRedo: (canUndo: boolean, canRedo: boolean) => void;
   setCropModeActive: (v: boolean) => void;
@@ -71,7 +69,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   zoomPercent: 100,
   canvasSize: '1280x720',
   saveName: '',
-  decks: [],
   selection: { hasSelection: false, isCropRect: false, type: null },
   canUndo: false,
   canRedo: false,
@@ -88,7 +85,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
   setCanvasSize: (s) => set({ canvasSize: s }),
   setSaveName: (s) => set({ saveName: s }),
-  setDecks: (d) => set({ decks: d }),
   setSelection: (s) => {
     const cur = get().selection;
     if (cur.hasSelection !== s.hasSelection || cur.isCropRect !== s.isCropRect || cur.type !== s.type) {
